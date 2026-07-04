@@ -471,7 +471,7 @@ def main():
                         date_short = r["date"][2:].replace("-", "")  # YYMMDD
                         print(f"  - {date_short}: {format_tokens(r['tokens'])}")
             if args.tmux:
-                print("MiMo: expired")
+                print("🍚MiMo: expired")
             else:
                 print(cached["error"], file=sys.stderr)
             sys.exit(1)
@@ -504,7 +504,7 @@ def main():
                     date_short = r["date"][2:].replace("-", "")  # YYMMDD
                     print(f"  - {date_short}: {format_tokens(r['tokens'])}")
         if args.tmux:
-            print("MiMo: expired")
+            print("🍚MiMo: expired")
         else:
             print(str(e), file=sys.stderr)
         sys.exit(1)
@@ -522,7 +522,7 @@ def main():
                     date_short = r["date"][2:].replace("-", "")  # YYMMDD
                     print(f"  - {date_short}: {format_tokens(r['tokens'])}")
         if args.tmux:
-            print(f"MiMo: response {e.response.status_code}")
+            print(f"🍚MiMo: response {e.response.status_code}")
         else:
             print(f"请求失败: {e}", file=sys.stderr)
         sys.exit(1)
@@ -540,7 +540,7 @@ def main():
                     date_short = r["date"][2:].replace("-", "")  # YYMMDD
                     print(f"  - {date_short}: {format_tokens(r['tokens'])}")
         if args.tmux:
-            print("MiMo: request error")
+            print("🍚MiMo: request error")
         else:
             print(f"请求失败: {e}", file=sys.stderr)
         sys.exit(1)
