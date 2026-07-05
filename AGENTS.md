@@ -22,7 +22,6 @@ mimo-stat -t        # tmux 状态栏单行格式
 - `setup.py` — 最小化 setuptools 配置，`psutil` 虽在依赖中但当前代码**未使用**
 - 配置文件: `~/.config/mimo-stat/config.json` (cookie, base_url)
 - 缓存文件: `~/.config/mimo-stat/cache.json` (30秒有效期，错误响应也会缓存)
-- Claude 统计: `~/.claude/stats-cache.json` (外部文件，30分钟有效期)
 
 ## API 认证特殊处理
 
