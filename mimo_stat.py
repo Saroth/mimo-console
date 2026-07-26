@@ -26,7 +26,7 @@ class AuthError(Exception):
     pass
 
 
-CONFIG_DIR = Path(__file__).parent / "conf"
+CONFIG_DIR = Path(__file__).resolve().parent / "conf"
 CONFIG_FILE = CONFIG_DIR / "config.yml"
 CACHE_FILE = CONFIG_DIR / "cache.json"
 CACHE_TTL = 30  # MiMo 缓存有效期（秒）
@@ -52,6 +52,15 @@ def load_config() -> dict:
     for key, value in DEFAULT_CONFIG.items():
         config.setdefault(key, value)
     return config
+
+
+def update_cookie(cookie: str) -> None:
+    """更新配置文件中的 cookie 值。"""
+    config = load_config()
+    config["cookie"] = cookie
+    with open(CONFIG_FILE, "w", encoding="utf-8") as f:
+        yaml.dump(config, f, default_flow_style=False, allow_unicode=True)
+    print(f"Cookie 已更新到 {CONFIG_FILE}")
 
 
 def load_cache() -> dict | None:
@@ -344,7 +353,13 @@ def format_tmux(detail: dict, usage: dict, recent: list[dict] | None = None, bal
 def main():
     parser = argparse.ArgumentParser(description="MiMo 平台 token 使用量查询工具")
     parser.add_argument("-t", "--tmux", action="store_true", help="输出适合 tmux 状态栏的单行格式")
+    parser.add_argument("-c", "--cookie", help="更新配置文件中的 cookie 值")
     args = parser.parse_args()
+
+    # 如果提供了 cookie 参数，更新配置文件并退出
+    if args.cookie:
+        update_cookie(args.cookie)
+        return
 
     config = load_config()
 
