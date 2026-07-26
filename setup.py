@@ -7,6 +7,7 @@ setup(
     install_requires=[
         "requests>=2.31.0",
         "psutil>=5.9.0",
+        "pyyaml>=6.0",
     ],
     entry_points={
         "console_scripts": [

@@ -49,12 +49,12 @@ MiMo: response 401
 
 ## 配置
 
-首次运行会创建 `~/.config/mimo-stat/config.json`，填入浏览器登录后的 Cookie：
+首次运行会创建 `./conf/config.yml`，填入浏览器登录后的 Cookie：
 
-```json
-{
-  "cookie": "your_cookie_here"
-}
+```yaml
+base_url: https://platform.xiaomimimo.com
+cookie: |-
+  your_cookie_here
 ```
 
 ### 获取 Cookie

@@ -18,6 +18,7 @@ from pathlib import Path
 from urllib.parse import quote
 
 import requests
+import yaml
 
 
 class AuthError(Exception):
@@ -25,8 +26,8 @@ class AuthError(Exception):
     pass
 
 
-CONFIG_DIR = Path.home() / ".config" / "mimo-stat"
-CONFIG_FILE = CONFIG_DIR / "config.json"
+CONFIG_DIR = Path(__file__).parent / "conf"
+CONFIG_FILE = CONFIG_DIR / "config.yml"
 CACHE_FILE = CONFIG_DIR / "cache.json"
 CACHE_TTL = 30  # MiMo 缓存有效期（秒）
 
@@ -40,12 +41,13 @@ def load_config() -> dict:
     """加载配置文件，不存在则创建默认配置。"""
     if not CONFIG_FILE.exists():
         CONFIG_DIR.mkdir(parents=True, exist_ok=True)
-        CONFIG_FILE.write_text(json.dumps(DEFAULT_CONFIG, indent=2, ensure_ascii=False))
+        with open(CONFIG_FILE, "w", encoding="utf-8") as f:
+            yaml.dump(DEFAULT_CONFIG, f, default_flow_style=False, allow_unicode=True)
         print(f"已创建默认配置: {CONFIG_FILE}", file=sys.stderr)
         print("请编辑配置文件填入 cookie 后重试。", file=sys.stderr)
         sys.exit(1)
-    with open(CONFIG_FILE) as f:
-        config = json.load(f)
+    with open(CONFIG_FILE, encoding="utf-8") as f:
+        config = yaml.safe_load(f)
     # 合并默认值
     for key, value in DEFAULT_CONFIG.items():
         config.setdefault(key, value)

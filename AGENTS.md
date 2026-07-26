@@ -14,14 +14,14 @@ mimo-stat -t        # tmux 状态栏单行格式
 
 ## 配置说明
 
-首次运行会创建 `~/.config/mimo-stat/config.json`，需要填入 cookie 后才能正常使用。Cookie 来源于浏览器登录 `platform.xiaomimimo.com`。
+首次运行会创建 `./conf/config.yml`，需要填入 cookie 后才能正常使用。Cookie 来源于浏览器登录 `platform.xiaomimimo.com`。
 
 ## 架构
 
 - `mimo_stat.py` — 完整应用（配置、API、格式化、CLI）
 - `setup.py` — 最小化 setuptools 配置，`psutil` 虽在依赖中但当前代码**未使用**
-- 配置文件: `~/.config/mimo-stat/config.json` (cookie, base_url)
-- 缓存文件: `~/.config/mimo-stat/cache.json` (30秒有效期，错误响应也会缓存)
+- 配置文件: `./conf/config.yml` (cookie, base_url)
+- 缓存文件: `./conf/cache.json` (30秒有效期，错误响应也会缓存)
 
 ## API 认证特殊处理
 
