@@ -119,7 +119,9 @@ def login_with_browser() -> None:
             "api-platform_slh",
             "api-platform_ph",
         ]:
-            cookie_parts.append(f'{cookie["name"]}="{cookie["value"]}"')
+            # 确保值不包含多余的引号
+            value = cookie["value"].strip('"')
+            cookie_parts.append(f'{cookie["name"]}="{value}"')
 
     if not cookie_parts:
         print("错误: 未获取到有效的 Cookie", file=sys.stderr)
