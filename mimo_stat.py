@@ -343,7 +343,7 @@ def format_output(detail: dict, usage: dict, recent: list[dict] | None = None, b
         month_percent = (month_used / month_limit * 100) if month_limit > 0 else 0
 
         lines.append(f"Token Plan: MiMo {plan_name}, exp:{end_date}")
-        lines.append(f"Credits usage: {format_tokens(month_used)} / {format_tokens(month_limit)}, {month_percent:.4f}%")
+        lines.append(f"Credits usage: {format_tokens(month_used)} / {format_tokens(month_limit)}, {month_percent:.3f}%")
 
         # 最近 3 天每日消耗
         if recent:
@@ -353,7 +353,7 @@ def format_output(detail: dict, usage: dict, recent: list[dict] | None = None, b
                 recent_percent = (credits_used / month_limit * 100) if month_limit > 0 else 0
                 date_short = r["date"][2:].replace("-", "")  # YYMMDD
                 lines.append(
-                    f"  - {date_short}: {format_tokens(credits_used)}, {recent_percent:.4f}%, "
+                    f"  - {date_short}: {format_tokens(credits_used)}, {recent_percent:.3f}%, "
                     f"hit:{format_tokens(r['inputHitToken'])}, mis:{format_tokens(r['inputMissToken'])}, out:{format_tokens(r['outputToken'])}"
                 )
 
@@ -389,7 +389,7 @@ def format_tmux(detail: dict, usage: dict, recent: list[dict] | None = None, bal
     month_limit = plan_item["limit"] if plan_item else 0
     month_percent = (month_used / month_limit * 100) if month_limit > 0 else 0
 
-    parts.append(f"Cr:{month_percent:.4f}%")
+    parts.append(f"Cr:{month_percent:.3f}%")
 
     # 最近 3 天每日消耗
     if recent:
@@ -398,7 +398,7 @@ def format_tmux(detail: dict, usage: dict, recent: list[dict] | None = None, bal
             credits_used = r["credits"]
             recent_percent = (credits_used / month_limit * 100) if month_limit > 0 else 0
             date_short = r["date"][5:].replace("-", "")  # MMDD
-            rec_parts.append(f"{date_short}:{recent_percent:.4f}%")
+            rec_parts.append(f"{date_short}:{recent_percent:.3f}%")
         parts.append("📊[" + " ".join(rec_parts) + "]")
 
     return " ".join(parts)
