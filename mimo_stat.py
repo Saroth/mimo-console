@@ -44,8 +44,6 @@ def load_config() -> dict:
         with open(CONFIG_FILE, "w", encoding="utf-8") as f:
             yaml.dump(DEFAULT_CONFIG, f, default_flow_style=False, allow_unicode=True)
         print(f"已创建默认配置: {CONFIG_FILE}", file=sys.stderr)
-        print("请编辑配置文件填入 cookie 后重试。", file=sys.stderr)
-        sys.exit(1)
     with open(CONFIG_FILE, encoding="utf-8") as f:
         config = yaml.safe_load(f)
     # 合并默认值
@@ -442,6 +440,18 @@ def main():
         return
 
     config = load_config()
+
+    # 如果 cookie 为空，自动打开浏览器获取
+    if not config.get("cookie"):
+        print("Cookie 未配置，正在打开浏览器获取...", file=sys.stderr)
+        if not login_with_browser():
+            save_cache({"error": "登录失败，请手动运行 mimo-stat --login"})
+            if args.tmux:
+                print("🍚MiMo: login failed")
+            else:
+                print("登录失败，请手动运行 mimo-stat --login", file=sys.stderr)
+            sys.exit(1)
+        config = load_config()
 
     # 尝试从缓存读取
     cached = load_cache()
