@@ -63,13 +63,13 @@ def update_cookie(cookie: str) -> None:
     print(f"Cookie 已更新到 {CONFIG_FILE}")
 
 
-def login_with_browser() -> None:
-    """通过浏览器登录获取 Cookie。"""
+def login_with_browser() -> bool:
+    """通过浏览器登录获取 Cookie。返回 True 表示成功，False 表示失败。"""
     try:
         from playwright.sync_api import sync_playwright
     except ImportError:
         print("错误: 需要安装 playwright，请运行: pip install playwright", file=sys.stderr)
-        sys.exit(1)
+        return False
 
     # 使用持久化浏览器上下文，保存登录状态
     browser_data_dir = CONFIG_DIR / "browser-data"
@@ -78,35 +78,39 @@ def login_with_browser() -> None:
     print("正在打开浏览器...")
     print("请在浏览器中登录小米账号，登录完成后程序将自动获取 Cookie。")
 
-    with sync_playwright() as p:
-        # 使用持久化上下文，保存登录状态到本地目录
-        context = p.chromium.launch_persistent_context(
-            user_data_dir=str(browser_data_dir),
-            headless=False,
-        )
-        page = context.new_page()
+    try:
+        with sync_playwright() as p:
+            # 使用持久化上下文，保存登录状态到本地目录
+            context = p.chromium.launch_persistent_context(
+                user_data_dir=str(browser_data_dir),
+                headless=False,
+            )
+            page = context.new_page()
 
-        # 访问 platform.xiaomimimo.com
-        page.goto("https://platform.xiaomimimo.com/console/plan-manage")
+            # 访问 platform.xiaomimimo.com
+            page.goto("https://platform.xiaomimimo.com/console/plan-manage")
 
-        # 等待用户登录（最多 5 分钟）
-        # 循环检查是否已登录（检测 api-platform_serviceToken cookie）
-        print("等待登录中... (最多 5 分钟)")
-        for i in range(300):  # 300秒 = 5分钟
-            time.sleep(1)
+            # 等待用户登录（最多 5 分钟）
+            # 循环检查是否已登录（检测 api-platform_serviceToken cookie）
+            print("等待登录中... (最多 5 分钟)")
+            for i in range(300):  # 300秒 = 5分钟
+                time.sleep(1)
+                cookies = context.cookies()
+                has_token = any(c["name"] == "api-platform_serviceToken" for c in cookies)
+                if has_token:
+                    break
+            else:
+                print("错误: 登录超时", file=sys.stderr)
+                context.close()
+                return False
+
+            # 获取所有 Cookie
             cookies = context.cookies()
-            has_token = any(c["name"] == "api-platform_serviceToken" for c in cookies)
-            if has_token:
-                break
-        else:
-            print("错误: 登录超时", file=sys.stderr)
+
             context.close()
-            sys.exit(1)
-
-        # 获取所有 Cookie
-        cookies = context.cookies()
-
-        context.close()
+    except Exception as e:
+        print(f"错误: 浏览器启动失败 - {e}", file=sys.stderr)
+        return False
 
     # 提取需要的 Cookie
     cookie_parts = []
@@ -125,11 +129,12 @@ def login_with_browser() -> None:
 
     if not cookie_parts:
         print("错误: 未获取到有效的 Cookie", file=sys.stderr)
-        sys.exit(1)
+        return False
 
     cookie_str = "; ".join(cookie_parts)
     update_cookie(cookie_str)
     print("登录成功！")
+    return True
 
 
 def load_cache() -> dict | None:
@@ -444,7 +449,14 @@ def main():
         # 如果缓存包含错误信息，自动重新登录
         if "error" in cached:
             print("Cookie 已过期，正在重新登录...", file=sys.stderr)
-            login_with_browser()
+            if not login_with_browser():
+                # 登录失败，缓存错误信息
+                save_cache({"error": "登录失败，请手动运行 mimo-stat --login"})
+                if args.tmux:
+                    print("🍚MiMo: login failed")
+                else:
+                    print("登录失败，请手动运行 mimo-stat --login", file=sys.stderr)
+                sys.exit(1)
             # 重新加载配置
             config = load_config()
             # 清除缓存
@@ -466,7 +478,14 @@ def main():
     except AuthError as e:
         # 认证失败，自动重新登录
         print("Cookie 已过期，正在重新登录...", file=sys.stderr)
-        login_with_browser()
+        if not login_with_browser():
+            # 登录失败，缓存错误信息
+            save_cache({"error": "登录失败，请手动运行 mimo-stat --login"})
+            if args.tmux:
+                print("🍚MiMo: login failed")
+            else:
+                print("登录失败，请手动运行 mimo-stat --login", file=sys.stderr)
+            sys.exit(1)
         # 重新加载配置并重试
         config = load_config()
         try:
@@ -478,6 +497,8 @@ def main():
             fmt = format_tmux if args.tmux else format_output
             print(fmt(detail, usage, recent, balance))
         except Exception as e2:
+            # 重试失败，缓存错误信息
+            save_cache({"error": f"重新登录后仍然失败: {e2}"})
             if args.tmux:
                 print("🍚MiMo: login failed")
             else:
