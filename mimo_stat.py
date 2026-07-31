@@ -71,12 +71,19 @@ def login_with_browser() -> None:
         print("错误: 需要安装 playwright，请运行: pip install playwright", file=sys.stderr)
         sys.exit(1)
 
+    # 使用持久化浏览器上下文，保存登录状态
+    browser_data_dir = CONFIG_DIR / "browser-data"
+    browser_data_dir.mkdir(parents=True, exist_ok=True)
+
     print("正在打开浏览器...")
     print("请在浏览器中登录小米账号，登录完成后程序将自动获取 Cookie。")
 
     with sync_playwright() as p:
-        browser = p.chromium.launch(headless=False)
-        context = browser.new_context()
+        # 使用持久化上下文，保存登录状态到本地目录
+        context = p.chromium.launch_persistent_context(
+            user_data_dir=str(browser_data_dir),
+            headless=False,
+        )
         page = context.new_page()
 
         # 访问 platform.xiaomimimo.com
@@ -87,13 +94,13 @@ def login_with_browser() -> None:
             page.wait_for_url("**/console/**", timeout=300000)
         except Exception:
             print("错误: 登录超时", file=sys.stderr)
-            browser.close()
+            context.close()
             sys.exit(1)
 
         # 获取所有 Cookie
         cookies = context.cookies()
 
-        browser.close()
+        context.close()
 
     # 提取需要的 Cookie
     cookie_parts = []
