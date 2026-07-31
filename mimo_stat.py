@@ -79,11 +79,25 @@ def login_with_browser() -> None:
     print("请在浏览器中登录小米账号，登录完成后程序将自动获取 Cookie。")
 
     with sync_playwright() as p:
-        # 使用持久化上下文，保存登录状态到本地目录
-        context = p.chromium.launch_persistent_context(
-            user_data_dir=str(browser_data_dir),
-            headless=False,
-        )
+        # 优先使用 Firefox（Linux 兼容性更好），其次 Chromium
+        try:
+            context = p.firefox.launch_persistent_context(
+                user_data_dir=str(browser_data_dir / "firefox"),
+                headless=False,
+            )
+        except Exception:
+            # Firefox 不可用时，尝试 Chromium
+            try:
+                context = p.chromium.launch_persistent_context(
+                    user_data_dir=str(browser_data_dir / "chromium"),
+                    headless=False,
+                )
+            except Exception as e:
+                print(f"错误: 无法启动浏览器，请安装 Firefox 或 Chromium", file=sys.stderr)
+                print(f"  Ubuntu/Debian: sudo apt install firefox", file=sys.stderr)
+                print(f"  或: playwright install firefox", file=sys.stderr)
+                sys.exit(1)
+
         page = context.new_page()
 
         # 访问 platform.xiaomimimo.com
