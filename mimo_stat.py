@@ -441,16 +441,18 @@ def main():
     # 尝试从缓存读取
     cached = load_cache()
     if cached:
-        # 如果缓存包含错误信息，显示错误后退出
+        # 如果缓存包含错误信息，自动重新登录
         if "error" in cached:
-            if args.tmux:
-                print("🍚MiMo: expired")
-            else:
-                print(cached["error"], file=sys.stderr)
-            sys.exit(1)
-        fmt = format_tmux if args.tmux else format_output
-        print(fmt(cached["detail"], cached["usage"], cached.get("recent"), cached.get("balance")))
-        return
+            print("Cookie 已过期，正在重新登录...", file=sys.stderr)
+            login_with_browser()
+            # 重新加载配置
+            config = load_config()
+            # 清除缓存
+            save_cache({"error": "clear"})
+        else:
+            fmt = format_tmux if args.tmux else format_output
+            print(fmt(cached["detail"], cached["usage"], cached.get("recent"), cached.get("balance")))
+            return
 
     # 缓存未命中，请求 API
     try:
@@ -462,13 +464,25 @@ def main():
         fmt = format_tmux if args.tmux else format_output
         print(fmt(detail, usage, recent, balance))
     except AuthError as e:
-        # 认证失败，缓存错误信息
-        save_cache({"error": str(e)})
-        if args.tmux:
-            print("🍚MiMo: expired")
-        else:
-            print(str(e), file=sys.stderr)
-        sys.exit(1)
+        # 认证失败，自动重新登录
+        print("Cookie 已过期，正在重新登录...", file=sys.stderr)
+        login_with_browser()
+        # 重新加载配置并重试
+        config = load_config()
+        try:
+            detail = get_plan_detail(config)
+            usage = get_plan_usage(config)
+            recent = get_recent_days_usage(config, days=3)
+            balance = get_balance(config)
+            save_cache({"detail": detail, "usage": usage, "recent": recent, "balance": balance})
+            fmt = format_tmux if args.tmux else format_output
+            print(fmt(detail, usage, recent, balance))
+        except Exception as e2:
+            if args.tmux:
+                print("🍚MiMo: login failed")
+            else:
+                print(f"重新登录后仍然失败: {e2}", file=sys.stderr)
+            sys.exit(1)
     except requests.HTTPError as e:
         if args.tmux:
             print(f"🍚MiMo: response {e.response.status_code}")
