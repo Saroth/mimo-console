@@ -65,52 +65,58 @@ def update_cookie(cookie: str) -> None:
 
 def login_with_browser() -> None:
     """通过浏览器登录获取 Cookie。"""
-    import subprocess
-    import webbrowser
-
-    print("正在打开浏览器...")
-    print("请在浏览器中登录小米账号。")
-    print()
-    print("登录完成后，请按 F12 打开开发者工具，执行以下命令获取 Cookie：")
-    print()
-    print("  document.cookie")
-    print()
-    print("然后将结果粘贴到这里：")
-
-    # 打开浏览器
-    url = "https://platform.xiaomimimo.com/console/plan-manage"
     try:
-        webbrowser.open(url)
-    except Exception:
-        print(f"请手动打开浏览器访问: {url}", file=sys.stderr)
-
-    # 等待用户输入 Cookie
-    print()
-    cookie_str = input("请粘贴 Cookie: ").strip()
-
-    if not cookie_str:
-        print("错误: 未输入 Cookie", file=sys.stderr)
+        from playwright.sync_api import sync_playwright
+    except ImportError:
+        print("错误: 需要安装 playwright，请运行: pip install playwright", file=sys.stderr)
         sys.exit(1)
 
-    # 提取需要的 Cookie 字段
+    # 使用持久化浏览器上下文，保存登录状态
+    browser_data_dir = CONFIG_DIR / "browser-data"
+    browser_data_dir.mkdir(parents=True, exist_ok=True)
+
+    print("正在打开浏览器...")
+    print("请在浏览器中登录小米账号，登录完成后程序将自动获取 Cookie。")
+
+    with sync_playwright() as p:
+        # 使用持久化上下文，保存登录状态到本地目录
+        context = p.chromium.launch_persistent_context(
+            user_data_dir=str(browser_data_dir),
+            headless=False,
+        )
+        page = context.new_page()
+
+        # 访问 platform.xiaomimimo.com
+        page.goto("https://platform.xiaomimimo.com/console/plan-manage")
+
+        # 等待用户登录（最多 5 分钟）
+        try:
+            page.wait_for_url("**/console/**", timeout=300000)
+        except Exception:
+            print("错误: 登录超时", file=sys.stderr)
+            context.close()
+            sys.exit(1)
+
+        # 获取所有 Cookie
+        cookies = context.cookies()
+
+        context.close()
+
+    # 提取需要的 Cookie
     cookie_parts = []
-    for item in cookie_str.split(";"):
-        item = item.strip()
-        if "=" in item:
-            name, value = item.split("=", 1)
-            name = name.strip()
-            if name in [
-                "serviceToken",
-                "xiaomichatbot_ph",
-                "api-platform_serviceToken",
-                "userId",
-                "api-platform_slh",
-                "api-platform_ph",
-            ]:
-                cookie_parts.append(f'{name}="{value.strip()}"')
+    for cookie in cookies:
+        if cookie["name"] in [
+            "serviceToken",
+            "xiaomichatbot_ph",
+            "api-platform_serviceToken",
+            "userId",
+            "api-platform_slh",
+            "api-platform_ph",
+        ]:
+            cookie_parts.append(f'{cookie["name"]}="{cookie["value"]}"')
 
     if not cookie_parts:
-        print("错误: 未找到有效的 Cookie 字段", file=sys.stderr)
+        print("错误: 未获取到有效的 Cookie", file=sys.stderr)
         sys.exit(1)
 
     cookie_str = "; ".join(cookie_parts)
