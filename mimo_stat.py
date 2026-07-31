@@ -63,6 +63,60 @@ def update_cookie(cookie: str) -> None:
     print(f"Cookie 已更新到 {CONFIG_FILE}")
 
 
+def login_with_browser() -> None:
+    """通过浏览器登录获取 Cookie。"""
+    try:
+        from playwright.sync_api import sync_playwright
+    except ImportError:
+        print("错误: 需要安装 playwright，请运行: pip install playwright", file=sys.stderr)
+        sys.exit(1)
+
+    print("正在打开浏览器...")
+    print("请在浏览器中登录小米账号，登录完成后程序将自动获取 Cookie。")
+
+    with sync_playwright() as p:
+        browser = p.chromium.launch(headless=False)
+        context = browser.new_context()
+        page = context.new_page()
+
+        # 访问 platform.xiaomimimo.com
+        page.goto("https://platform.xiaomimimo.com/console/plan-manage")
+
+        # 等待用户登录（最多 5 分钟）
+        try:
+            page.wait_for_url("**/console/**", timeout=300000)
+        except Exception:
+            print("错误: 登录超时", file=sys.stderr)
+            browser.close()
+            sys.exit(1)
+
+        # 获取所有 Cookie
+        cookies = context.cookies()
+
+        browser.close()
+
+    # 提取需要的 Cookie
+    cookie_parts = []
+    for cookie in cookies:
+        if cookie["name"] in [
+            "serviceToken",
+            "xiaomichatbot_ph",
+            "api-platform_serviceToken",
+            "userId",
+            "api-platform_slh",
+            "api-platform_ph",
+        ]:
+            cookie_parts.append(f'{cookie["name"]}="{cookie["value"]}"')
+
+    if not cookie_parts:
+        print("错误: 未获取到有效的 Cookie", file=sys.stderr)
+        sys.exit(1)
+
+    cookie_str = "; ".join(cookie_parts)
+    update_cookie(cookie_str)
+    print("登录成功！")
+
+
 def load_cache() -> dict | None:
     """加载缓存，超过 TTL 则返回 None。
 
@@ -354,7 +408,13 @@ def main():
     parser = argparse.ArgumentParser(description="MiMo 平台 token 使用量查询工具")
     parser.add_argument("-t", "--tmux", action="store_true", help="输出适合 tmux 状态栏的单行格式")
     parser.add_argument("-c", "--cookie", help="更新配置文件中的 cookie 值")
+    parser.add_argument("-l", "--login", action="store_true", help="通过浏览器登录获取 cookie")
     args = parser.parse_args()
+
+    # 如果提供了 login 参数，通过浏览器登录获取 cookie
+    if args.login:
+        login_with_browser()
+        return
 
     # 如果提供了 cookie 参数，更新配置文件并退出
     if args.cookie:
