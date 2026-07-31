@@ -90,9 +90,15 @@ def login_with_browser() -> None:
         page.goto("https://platform.xiaomimimo.com/console/plan-manage")
 
         # 等待用户登录（最多 5 分钟）
-        try:
-            page.wait_for_url("**/console/**", timeout=300000)
-        except Exception:
+        # 循环检查是否已登录（检测 api-platform_serviceToken cookie）
+        print("等待登录中... (最多 5 分钟)")
+        for i in range(300):  # 300秒 = 5分钟
+            time.sleep(1)
+            cookies = context.cookies()
+            has_token = any(c["name"] == "api-platform_serviceToken" for c in cookies)
+            if has_token:
+                break
+        else:
             print("错误: 登录超时", file=sys.stderr)
             context.close()
             sys.exit(1)
